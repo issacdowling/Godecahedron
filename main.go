@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -48,6 +49,28 @@ func handleClient(conn net.Conn) {
 
 	parsePacket(msg[length_bytes:claimed_length])
 	// conn.Close()
+	//
+	response, err := json.Marshal(StatusResponse{
+		Version: SRVersion{
+			Name:     "Test",
+			Protocol: 767,
+		},
+		Players: SRPlayers{
+			Max:    42,
+			Online: 43,
+			// No sample
+		},
+		Description: SRDesc{
+			Text: "Godecahedron",
+		},
+		// No Favicon
+		EnforcesSecureChat: false,
+	})
+	if err != nil {
+		panic("Failed to JSON encode response: " + err.Error())
+	}
+
+	sendPacket(response, conn)
 }
 
 // Parse Minecraft VarInts.
@@ -74,6 +97,25 @@ func nextVarint(buf []byte) (int32, int8, error) {
 		}
 	}
 	return value, pos / valueBits, nil
+}
+
+func writeVarint(value int32) ([]byte, int8) {
+	var bytes int8
+	var varint []byte
+	const valueBitmask byte = 0x7F
+	const endBitmask byte = 0x80
+	for {
+		bytes++
+		fmt.Println(varint)
+		if (byte(value) & ^valueBitmask) == 0 {
+			varint = append(varint, byte(value))
+			return varint, bytes
+		}
+		fmt.Println("\n\n\n\nXXXXX")
+
+		varint = append(varint, byte(value)&valueBitmask|endBitmask)
+		value >>= 7
+	}
 }
 
 func parsePacket(buf []byte) {
@@ -107,4 +149,17 @@ func parsePacket(buf []byte) {
 	var portInt uint16
 	binary.Read(portReader, binary.BigEndian, &portInt)
 	fmt.Println(portInt)
+}
+
+func sendPacket(buf []byte, conn net.Conn) {
+	lenBufBytes, lenBufLen := writeVarint(int32(len(buf)))
+	lenTotalBytes, _ := writeVarint(1 + int32(lenBufLen) + int32(len(buf)))
+	var testResponse []byte
+
+	testResponse = append(testResponse, lenTotalBytes...)
+	testResponse = append(testResponse, byte(0x00))
+	testResponse = append(testResponse, lenBufBytes...)
+	testResponse = append(testResponse, buf...)
+	fmt.Println(testResponse)
+	conn.Write(testResponse)
 }
