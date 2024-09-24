@@ -1,4 +1,4 @@
-package main
+package types
 
 // Tried using anonymous structs, but declaring them requires restating their types
 type StatusResponse struct {

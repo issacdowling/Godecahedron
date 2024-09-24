@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	types "gitlab.com/issacdowling/godecahedron/internal/types"
 )
 
 const (
@@ -50,17 +52,17 @@ func handleClient(conn net.Conn) {
 	parsePacket(msg[length_bytes:claimed_length])
 	// conn.Close()
 	//
-	response, err := json.Marshal(StatusResponse{
-		Version: SRVersion{
+	response, err := json.Marshal(types.StatusResponse{
+		Version: types.SRVersion{
 			Name:     "Test",
 			Protocol: 767,
 		},
-		Players: SRPlayers{
+		Players: types.SRPlayers{
 			Max:    42,
 			Online: 43,
 			// No sample
 		},
-		Description: SRDesc{
+		Description: types.SRDesc{
 			Text: "Godecahedron",
 		},
 		// No Favicon
@@ -106,12 +108,10 @@ func writeVarint(value int32) ([]byte, int8) {
 	const endBitmask byte = 0x80
 	for {
 		bytes++
-		fmt.Println(varint)
 		if (byte(value) & ^valueBitmask) == 0 {
 			varint = append(varint, byte(value))
 			return varint, bytes
 		}
-		fmt.Println("\n\n\n\nXXXXX")
 
 		varint = append(varint, byte(value)&valueBitmask|endBitmask)
 		value >>= 7
@@ -160,6 +160,5 @@ func sendPacket(buf []byte, conn net.Conn) {
 	testResponse = append(testResponse, byte(0x00))
 	testResponse = append(testResponse, lenBufBytes...)
 	testResponse = append(testResponse, buf...)
-	fmt.Println(testResponse)
 	conn.Write(testResponse)
 }
